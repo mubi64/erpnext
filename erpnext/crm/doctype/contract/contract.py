@@ -1,36 +1,28 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+from __future__ import unicode_literals
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.model.naming import set_name_by_naming_series
-from frappe.utils import getdate, nowdate
+from frappe.utils import getdate, now_datetime, nowdate
 
 
 class Contract(Document):
 	def autoname(self):
-		if frappe.db.get_single_value("Selling Settings", "contract_naming_by") == "Naming Series":
-			set_name_by_naming_series(self)
+		name = self.party_name
 
-		else:
-			name = self.party_name
+		if self.contract_template:
+			name += " - {} Agreement".format(self.contract_template)
 
-			if self.contract_template:
-				name = f"{name} - {self.contract_template} Agreement"
+		# If identical, append contract name with the next number in the iteration
+		if frappe.db.exists("Contract", name):
+			count = len(frappe.get_all("Contract", filters={"name": ["like", "%{}%".format(name)]}))
+			name = "{} - {}".format(name, count)
 
-			# If identical, append contract name with the next number in the iteration
-			if frappe.db.exists("Contract", name):
-				count = frappe.db.count(
-					"Contract",
-					filters={
-						"name": ("like", f"%{name}%"),
-					},
-				)
-				name = f"{name} - {count}"
-
-			self.name = _(name)
+		self.name = _(name)
 
 	def validate(self):
 		self.validate_dates()
@@ -85,11 +77,11 @@ def get_status(start_date, end_date):
 	Get a Contract's status based on the start, current and end dates
 
 	Args:
-	        start_date (str): The start date of the contract
-	        end_date (str): The end date of the contract
+		start_date (str): The start date of the contract
+		end_date (str): The end date of the contract
 
 	Returns:
-	        str: 'Active' if within range, otherwise 'Inactive'
+		str: 'Active' if within range, otherwise 'Inactive'
 	"""
 
 	if not end_date:
@@ -108,13 +100,13 @@ def update_status_for_contracts():
 	and submitted Contracts
 	"""
 
-	contracts = frappe.get_all(
-		"Contract",
-		filters={"is_signed": True, "docstatus": 1},
-		fields=["name", "start_date", "end_date"],
-	)
+	contracts = frappe.get_all("Contract",
+								filters={"is_signed": True,
+										"docstatus": 1},
+								fields=["name", "start_date", "end_date"])
 
 	for contract in contracts:
-		status = get_status(contract.get("start_date"), contract.get("end_date"))
+		status = get_status(contract.get("start_date"),
+							contract.get("end_date"))
 
 		frappe.db.set_value("Contract", contract.get("name"), "status", status)

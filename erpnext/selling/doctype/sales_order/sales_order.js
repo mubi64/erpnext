@@ -43,9 +43,6 @@ frappe.ui.form.on("Sales Order", {
 				}
 			}
 		});
-
-		frm.set_df_property('packed_items', 'cannot_add_rows', true);
-		frm.set_df_property('packed_items', 'cannot_delete_rows', true);
 	},
 	refresh: function(frm) {
 		if(frm.doc.docstatus === 1 && frm.doc.status !== 'Closed'
@@ -65,11 +62,7 @@ frappe.ui.form.on("Sales Order", {
 			frm.set_value('transaction_date', frappe.datetime.get_today())
 		}
 		erpnext.queries.setup_queries(frm, "Warehouse", function() {
-			return {
-				filters: [
-					["Warehouse", "company", "in", ["", cstr(frm.doc.company)]],
-				]
-			};
+			return erpnext.queries.warehouse(frm.doc);
 		});
 
 		frm.set_query('project', function(doc, cdt, cdn) {
@@ -81,21 +74,7 @@ frappe.ui.form.on("Sales Order", {
 			}
 		});
 
-		frm.set_query('warehouse', 'items', function(doc, cdt, cdn) {
-			let row  = locals[cdt][cdn];
-			let query = {
-				filters: [
-					["Warehouse", "company", "in", ["", cstr(frm.doc.company)]],
-				]
-			};
-			if (row.item_code) {
-				query.query = "erpnext.controllers.queries.warehouse_query";
-				query.filters.push(["Bin", "item_code", "=", row.item_code]);
-			}
-			return query;
-		});
-
-		frm.ignore_doctypes_on_cancel_all = ['Purchase Order'];
+		erpnext.queries.setup_warehouse_query(frm);
 	},
 
 	delivery_date: function(frm) {
@@ -168,9 +147,7 @@ erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend(
 						}
 					}
 
-					if (flt(doc.per_picked, 6) < 100 && flt(doc.per_delivered, 6) < 100) {
-						this.frm.add_custom_button(__('Pick List'), () => this.create_pick_list(), __('Create'));
-					}
+					this.frm.add_custom_button(__('Pick List'), () => this.create_pick_list(), __('Create'));
 
 					const order_is_a_sale = ["Sales", "Shopping Cart"].indexOf(doc.order_type) !== -1;
 					const order_is_maintenance = ["Maintenance"].indexOf(doc.order_type) !== -1;
@@ -337,7 +314,7 @@ erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend(
 						title: __('Select Items to Manufacture'),
 						fields: fields,
 						primary_action: function() {
-							var data = {items: d.fields_dict.items.grid.get_selected_children()};
+							var data = d.get_values();
 							me.frm.call({
 								method: 'make_work_orders',
 								args: {
@@ -475,8 +452,12 @@ erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend(
 	make_delivery_note_based_on_delivery_date: function() {
 		var me = this;
 
-		var delivery_dates = this.frm.doc.items.map(i => i.delivery_date);
-		delivery_dates = [ ...new Set(delivery_dates) ];
+		var delivery_dates = [];
+		$.each(this.frm.doc.items || [], function(i, d) {
+			if(!delivery_dates.includes(d.delivery_date)) {
+				delivery_dates.push(d.delivery_date);
+			}
+		});
 
 		var item_grid = this.frm.fields_dict["items"].grid;
 		if(!item_grid.get_selected().length && delivery_dates.length > 1) {
@@ -514,7 +495,14 @@ erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend(
 
 				if(!dates) return;
 
-				me.make_delivery_note(dates);
+				$.each(dates, function(i, d) {
+					$.each(item_grid.grid_rows || [], function(j, row) {
+						if(row.doc.delivery_date == d) {
+							row.doc.__checked = 1;
+						}
+					});
+				})
+				me.make_delivery_note();
 				dialog.hide();
 			});
 			dialog.show();
@@ -523,13 +511,10 @@ erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend(
 		}
 	},
 
-	make_delivery_note: function(delivery_dates) {
+	make_delivery_note: function() {
 		frappe.model.open_mapped_doc({
 			method: "erpnext.selling.doctype.sales_order.sales_order.make_delivery_note",
-			frm: this.frm,
-			args: {
-				delivery_dates
-			}
+			frm: this.frm
 		})
 	},
 
@@ -580,7 +565,6 @@ erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend(
 		var me = this;
 		var dialog = new frappe.ui.Dialog({
 			title: __("Select Items"),
-			size: "large",
 			fields: [
 				{
 					"fieldtype": "Check",
@@ -682,8 +666,7 @@ erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend(
 			} else {
 				let po_items = [];
 				me.frm.doc.items.forEach(d => {
-					let ordered_qty = me.get_ordered_qty(d, me.frm.doc);
-					let pending_qty = (flt(d.stock_qty) - ordered_qty) / flt(d.conversion_factor);
+					let pending_qty = (flt(d.stock_qty) - flt(d.ordered_qty)) / flt(d.conversion_factor);
 					if (pending_qty > 0) {
 						po_items.push({
 							"doctype": "Sales Order Item",
@@ -707,24 +690,6 @@ erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend(
 		dialog.get_field("items_for_po").refresh();
 		dialog.wrapper.find('.grid-heading-row .grid-row-check').click();
 		dialog.show();
-	},
-
-	get_ordered_qty: function(item, so) {
-		let ordered_qty = item.ordered_qty;
-		if (so.packed_items && so.packed_items.length) {
-			// calculate ordered qty based on packed items in case of product bundle
-			let packed_items = so.packed_items.filter(
-				(pi) => pi.parent_detail_docname == item.name
-			);
-			if (packed_items && packed_items.length) {
-				ordered_qty = packed_items.reduce(
-					(sum, pi) => sum + flt(pi.ordered_qty),
-					0
-				);
-				ordered_qty = ordered_qty / packed_items.length;
-			}
-		}
-		return ordered_qty;
 	},
 
 	hold_sales_order: function(){

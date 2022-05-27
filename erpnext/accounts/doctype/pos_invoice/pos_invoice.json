@@ -171,7 +171,6 @@
   "sales_team_section_break",
   "sales_partner",
   "column_break10",
-  "amount_eligible_for_commission",
   "commission_rate",
   "total_commission",
   "section_break2",
@@ -264,6 +263,7 @@
    "print_hide": 1
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
    "fieldname": "is_return",
    "fieldtype": "Check",
@@ -622,7 +622,6 @@
    "read_only": 1
   },
   {
-   "depends_on": "packed_items",
    "fieldname": "packing_list",
    "fieldtype": "Section Break",
    "label": "Packing List",
@@ -630,7 +629,6 @@
    "print_hide": 1
   },
   {
-   "depends_on": "packed_items",
    "fieldname": "packed_items",
    "fieldtype": "Table",
    "label": "Packed Items",
@@ -1561,23 +1559,16 @@
    "label": "Coupon Code",
    "options": "Coupon Code",
    "print_hide": 1
-  },
-  {
-   "fieldname": "amount_eligible_for_commission",
-   "fieldtype": "Currency",
-   "label": "Amount Eligible for Commission",
-   "read_only": 1
   }
  ],
  "icon": "fa fa-file-text",
  "is_submittable": 1,
  "links": [],
- "modified": "2022-03-22 13:00:24.166684",
+ "modified": "2021-08-24 18:19:20.728433",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "POS Invoice",
  "name_case": "Title Case",
- "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -1622,7 +1613,6 @@
  "show_name_in_global_search": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
  "timeline_field": "customer",
  "title_field": "title",
  "track_changes": 1,

@@ -2,13 +2,6 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on('Production Plan', {
-
-	before_save: function(frm) {
-		// preserve temporary names on production plan item to re-link sub-assembly items
-		frm.doc.po_items.forEach(item => {
-			item.temporary_name = item.name;
-		});
-	},
 	setup: function(frm) {
 		frm.custom_make_buttons = {
 			'Work Order': 'Work Order / Subcontract PO',
@@ -56,7 +49,7 @@ frappe.ui.form.on('Production Plan', {
 			if (d.item_code) {
 				return {
 					query: "erpnext.controllers.queries.bom",
-					filters:{'item': cstr(d.item_code), 'docstatus': 1}
+					filters:{'item': cstr(d.item_code)}
 				}
 			} else frappe.msgprint(__("Please enter Item first"));
 		}
@@ -112,7 +105,7 @@ frappe.ui.form.on('Production Plan', {
 		}
 		frm.trigger("material_requirement");
 
-		const projected_qty_formula = ` <table class="table table-bordered" style="background-color: var(--scrollbar-track-color);">
+		const projected_qty_formula = ` <table class="table table-bordered" style="background-color: #f9f9f9;">
 			<tr><td style="padding-left:25px">
 				<div>
 				<h3 style="text-decoration: underline;">
@@ -245,18 +238,10 @@ frappe.ui.form.on('Production Plan', {
 			method: "get_items",
 			freeze: true,
 			doc: frm.doc,
-			callback: function() {
-				frm.refresh_field("po_items");
-				if (frm.doc.sub_assembly_items.length > 0) {
-					frm.trigger("get_sub_assembly_items");
-				}
-			}
 		});
 	},
 
 	get_sub_assembly_items: function(frm) {
-		frm.dirty();
-
 		frappe.call({
 			method: "get_sub_assembly_items",
 			freeze: true,
@@ -269,7 +254,7 @@ frappe.ui.form.on('Production Plan', {
 
 	get_items_for_mr: function(frm) {
 		if (!frm.doc.for_warehouse) {
-			frappe.throw(__("To make material requests, 'Make Material Request for Warehouse' field is mandatory"));
+			frappe.throw(__("Select warehouse for material requests"));
 		}
 
 		if (frm.doc.ignore_existing_ordered_qty) {
@@ -280,18 +265,9 @@ frappe.ui.form.on('Production Plan', {
 				title: title,
 				fields: [
 					{
-						'label': __('Target Warehouse'),
-						'fieldtype': 'Link',
-						'fieldname': 'target_warehouse',
-						'read_only': true,
-						'default': frm.doc.for_warehouse
-					},
-					{
-						'label': __('Source Warehouses (Optional)'),
-						'fieldtype': 'Table MultiSelect',
-						'fieldname': 'warehouses',
-						'options': 'Production Plan Material Request Warehouse',
-						'description': __('If source warehouse selected then system will create the material request with type Material Transfer from Source to Target warehouse. If not selected then will create the material request with type Purchase for the target warehouse.'),
+						"fieldtype": "Table MultiSelect", "label": __("Source Warehouses (Optional)"),
+						"fieldname": "warehouses", "options": "Production Plan Material Request Warehouse",
+						"description": __("System will pickup the materials from the selected warehouses. If not specified, system will create material request for purchase."),
 						get_query: function () {
 							return {
 								filters: {
@@ -366,11 +342,7 @@ frappe.ui.form.on('Production Plan', {
 
 		frappe.prompt(fields, (row) => {
 			let get_template_url = 'erpnext.manufacturing.doctype.production_plan.production_plan.download_raw_materials';
-			open_url_post(frappe.request.url, {
-				cmd: get_template_url,
-				doc: frm.doc,
-				warehouses: row.warehouses
-			});
+			open_url_post(frappe.request.url, { cmd: get_template_url, doc: frm.doc, warehouses: row.warehouses });
 		}, __('Select Warehouses to get Stock for Materials Planning'), __('Get Stock'));
 	},
 
@@ -446,25 +418,6 @@ frappe.ui.form.on("Material Request Plan Item", {
 				}
 			})
 		}
-	}
-});
-
-frappe.ui.form.on("Production Plan Sales Order", {
-	sales_order(frm, cdt, cdn) {
-		const { sales_order } = locals[cdt][cdn];
-		if (!sales_order) {
-			return;
-		}
-		frappe.call({
-			method: "erpnext.manufacturing.doctype.production_plan.production_plan.get_so_details",
-			args: { sales_order },
-			callback(r) {
-				const {transaction_date, customer, grand_total} = r.message;
-				frappe.model.set_value(cdt, cdn, 'sales_order_date', transaction_date);
-				frappe.model.set_value(cdt, cdn, 'customer', customer);
-				frappe.model.set_value(cdt, cdn, 'grand_total', grand_total);
-			}
-		});
 	}
 });
 

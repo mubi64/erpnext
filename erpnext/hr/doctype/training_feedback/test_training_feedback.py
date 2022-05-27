@@ -1,17 +1,12 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
-
-import unittest
+from __future__ import unicode_literals
 
 import frappe
-
-from erpnext.hr.doctype.training_event.test_training_event import (
-	create_training_event,
-	create_training_program,
-)
+import unittest
 from erpnext.payroll.doctype.salary_structure.test_salary_structure import make_employee
-
-
+from erpnext.hr.doctype.training_event.test_training_event import create_training_program, create_training_event
 class TestTrainingFeedback(unittest.TestCase):
 	def setUp(self):
 		create_training_program("Basic Training")
@@ -32,9 +27,10 @@ class TestTrainingFeedback(unittest.TestCase):
 		self.assertRaises(frappe.ValidationError, feedback.save)
 
 		# cannot record feedback for absent employee
-		employee = frappe.db.get_value(
-			"Training Event Employee", {"parent": training_event.name, "employee": self.employee}, "name"
-		)
+		employee = frappe.db.get_value("Training Event Employee", {
+			"parent": training_event.name,
+			"employee": self.employee
+		}, "name")
 
 		frappe.db.set_value("Training Event Employee", employee, "attendance", "Absent")
 		feedback = create_training_feedback(training_event.name, self.employee)
@@ -51,9 +47,10 @@ class TestTrainingFeedback(unittest.TestCase):
 		feedback = create_training_feedback(training_event.name, self.employee)
 		feedback.submit()
 
-		status = frappe.db.get_value(
-			"Training Event Employee", {"parent": training_event.name, "employee": self.employee}, "status"
-		)
+		status = frappe.db.get_value("Training Event Employee", {
+			"parent": training_event.name,
+			"employee": self.employee
+		}, "status")
 
 		self.assertEqual(status, "Feedback Submitted")
 
@@ -62,11 +59,9 @@ class TestTrainingFeedback(unittest.TestCase):
 
 
 def create_training_feedback(event, employee):
-	return frappe.get_doc(
-		{
-			"doctype": "Training Feedback",
-			"training_event": event,
-			"employee": employee,
-			"feedback": "Test",
-		}
-	)
+	return frappe.get_doc({
+		"doctype": "Training Feedback",
+		"training_event": event,
+		"employee": employee,
+		"feedback": "Test"
+	})

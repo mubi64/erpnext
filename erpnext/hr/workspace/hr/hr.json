@@ -743,6 +743,16 @@
    "onboard": 0,
    "type": "Link"
   },
+    {
+   "dependencies": "Attendance",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Monthly Attendance Sheet Custom",
+   "link_to": "Monthly Attendance Sheet Custom",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
   {
    "dependencies": "Staffing Plan",
    "hidden": 0,

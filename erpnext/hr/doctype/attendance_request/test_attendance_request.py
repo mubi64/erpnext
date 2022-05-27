@@ -1,14 +1,14 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
-
-import unittest
-from datetime import date
+from __future__ import unicode_literals
 
 import frappe
+import unittest
 from frappe.utils import nowdate
+from datetime import date
 
 test_dependencies = ["Employee"]
-
 
 class TestAttendanceRequest(unittest.TestCase):
 	def setUp(self):
@@ -35,10 +35,10 @@ class TestAttendanceRequest(unittest.TestCase):
 			"Attendance",
 			filters={
 				"attendance_request": attendance_request.name,
-				"attendance_date": date(date.today().year, 1, 1),
+				"attendance_date": date(date.today().year, 1, 1)
 			},
 			fieldname=["status", "docstatus"],
-			as_dict=True,
+			as_dict=True
 		)
 		self.assertEqual(attendance.status, "Present")
 		self.assertEqual(attendance.docstatus, 1)
@@ -52,9 +52,9 @@ class TestAttendanceRequest(unittest.TestCase):
 			"Attendance",
 			filters={
 				"attendance_request": attendance_request.name,
-				"attendance_date": date(date.today().year, 1, 1),
+				"attendance_date": date(date.today().year, 1, 1)
 			},
-			fieldname="docstatus",
+			fieldname="docstatus"
 		)
 		self.assertEqual(attendance_docstatus, 2)
 
@@ -75,11 +75,11 @@ class TestAttendanceRequest(unittest.TestCase):
 			"Attendance",
 			filters={
 				"attendance_request": attendance_request.name,
-				"attendance_date": date(date.today().year, 1, 1),
+				"attendance_date": date(date.today().year, 1, 1)
 			},
-			fieldname="status",
+			fieldname="status"
 		)
-		self.assertEqual(attendance_status, "Work From Home")
+		self.assertEqual(attendance_status, 'Work From Home')
 
 		attendance_request.cancel()
 
@@ -89,12 +89,11 @@ class TestAttendanceRequest(unittest.TestCase):
 			"Attendance",
 			filters={
 				"attendance_request": attendance_request.name,
-				"attendance_date": date(date.today().year, 1, 1),
+				"attendance_date": date(date.today().year, 1, 1)
 			},
-			fieldname="docstatus",
+			fieldname="docstatus"
 		)
 		self.assertEqual(attendance_docstatus, 2)
-
 
 def get_employee():
 	return frappe.get_doc("Employee", "_T-Employee-00001")

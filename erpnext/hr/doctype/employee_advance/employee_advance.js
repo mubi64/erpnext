@@ -65,16 +65,15 @@ frappe.ui.form.on('Employee Advance', {
 			);
 		}
 
-		if (
-			frm.doc.docstatus === 1
-			&& (flt(frm.doc.claimed_amount) < flt(frm.doc.paid_amount) - flt(frm.doc.return_amount))
-		) {
+		if (frm.doc.docstatus === 1 &&
+			(flt(frm.doc.claimed_amount) < flt(frm.doc.paid_amount) && flt(frm.doc.paid_amount) != flt(frm.doc.return_amount))) {
+
 			if (frm.doc.repay_unclaimed_amount_from_salary == 0 && frappe.model.can_create("Journal Entry")) {
 				frm.add_custom_button(__("Return"), function() {
 					frm.trigger('make_return_entry');
 				}, __('Create'));
 			} else if (frm.doc.repay_unclaimed_amount_from_salary == 1 && frappe.model.can_create("Additional Salary")) {
-				frm.add_custom_button(__("Deduction from Salary"), function() {
+				frm.add_custom_button(__("Deduction from salary"), function() {
 					frm.events.make_deduction_via_additional_salary(frm);
 				}, __('Create'));
 			}

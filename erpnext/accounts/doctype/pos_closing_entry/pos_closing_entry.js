@@ -64,15 +64,13 @@ frappe.ui.form.on('POS Closing Entry', {
 	pos_opening_entry(frm) {
 		if (frm.doc.pos_opening_entry && frm.doc.period_start_date && frm.doc.period_end_date && frm.doc.user) {
 			reset_values(frm);
-			frappe.run_serially([
-				() => frm.trigger("set_opening_amounts"),
-				() => frm.trigger("get_pos_invoices")
-			]);
+			frm.trigger("set_opening_amounts");
+			frm.trigger("get_pos_invoices");
 		}
 	},
 
 	set_opening_amounts(frm) {
-		return frappe.db.get_doc("POS Opening Entry", frm.doc.pos_opening_entry)
+		frappe.db.get_doc("POS Opening Entry", frm.doc.pos_opening_entry)
 			.then(({ balance_details }) => {
 				balance_details.forEach(detail => {
 					frm.add_child("payment_reconciliation", {
@@ -85,7 +83,7 @@ frappe.ui.form.on('POS Closing Entry', {
 	},
 
 	get_pos_invoices(frm) {
-		return frappe.call({
+		frappe.call({
 			method: 'erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry.get_pos_invoices',
 			args: {
 				start: frappe.datetime.get_datetime_as_string(frm.doc.period_start_date),

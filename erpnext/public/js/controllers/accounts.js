@@ -27,8 +27,7 @@ frappe.ui.form.on(cur_frm.doctype, {
 					query: "erpnext.controllers.queries.tax_account_query",
 					filters: {
 						"account_type": account_type,
-						"company": doc.company,
-						"disabled": 0
+						"company": doc.company
 					}
 				}
 			});
