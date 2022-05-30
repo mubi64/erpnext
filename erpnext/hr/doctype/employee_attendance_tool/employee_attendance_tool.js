@@ -124,6 +124,9 @@ erpnext.EmployeeSelector = Class.extend({
 
 		var mark_employee_toolbar = $('<div class="col-sm-12 bottom-toolbar">\
 			<button class="btn btn-primary btn-mark-present btn-xs"></button>\
+			<button class="btn btn-info btn-mark-late btn-xs"></button>\
+			<button class="btn btn-info btn-mark-early btn-xs"></button>\
+			<button class="btn btn-info btn-mark-late-early btn-xs"></button>\
 			<button class="btn btn-primary btn-mark-work-from-home btn-xs"></button>\
 			<button class="btn btn-warning btn-mark-half-day btn-xs"></button>\
 			<button class="btn btn-danger btn-mark-absent btn-xs"></button>\
@@ -173,6 +176,85 @@ erpnext.EmployeeSelector = Class.extend({
 					}
 				});
 			});
+
+			mark_employee_toolbar.find(".btn-mark-late")
+			.html(__('Mark Late'))
+			.on("click", function() {
+				var employee_present = [];
+				$(me.wrapper).find('input[type="checkbox"]').each(function(i, check) {
+					if($(check).is(":checked")) {
+						employee_present.push(employee[i]);
+					}
+				});
+				frappe.call({
+					method: "erpnext.hr.doctype.employee_attendance_tool.employee_attendance_tool.mark_employee_attendance",
+					args:{
+						"employee_list":employee_present,
+						"status":"Present",
+						"date":frm.doc.date,
+						"company":frm.doc.company,
+						"late":1
+					},
+
+					callback: function(r) {
+						erpnext.employee_attendance_tool.load_employees(frm);
+
+					}
+				});
+		});
+
+		mark_employee_toolbar.find(".btn-mark-early")
+			.html(__('Mark Early'))
+			.on("click", function() {
+				var employee_present = [];
+				$(me.wrapper).find('input[type="checkbox"]').each(function(i, check) {
+					if($(check).is(":checked")) {
+						employee_present.push(employee[i]);
+					}
+				});
+				frappe.call({
+					method: "erpnext.hr.doctype.employee_attendance_tool.employee_attendance_tool.mark_employee_attendance",
+					args:{
+						"employee_list":employee_present,
+						"status":"Present",
+						"date":frm.doc.date,
+						"company":frm.doc.company,
+						"early":1
+					},
+
+					callback: function(r) {
+						erpnext.employee_attendance_tool.load_employees(frm);
+
+					}
+				});
+		});
+
+		mark_employee_toolbar.find(".btn-mark-late-early")
+			.html(__('Mark Late & Early'))
+			.on("click", function() {
+				var employee_present = [];
+				$(me.wrapper).find('input[type="checkbox"]').each(function(i, check) {
+					if($(check).is(":checked")) {
+						employee_present.push(employee[i]);
+					}
+				});
+				frappe.call({
+					method: "erpnext.hr.doctype.employee_attendance_tool.employee_attendance_tool.mark_employee_attendance",
+					args:{
+						"employee_list":employee_present,
+						"status":"Present",
+						"date":frm.doc.date,
+						"company":frm.doc.company,
+						"late":1,
+						"early":1
+					},
+
+					callback: function(r) {
+						erpnext.employee_attendance_tool.load_employees(frm);
+
+					}
+				});
+		});
 
 		mark_employee_toolbar.find(".btn-mark-absent")
 			.html(__('Mark Absent'))

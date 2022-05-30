@@ -42,7 +42,7 @@ def get_employees(date, department=None, branch=None, company=None):
 
 
 @frappe.whitelist()
-def mark_employee_attendance(employee_list, status, date, leave_type=None, company=None):
+def mark_employee_attendance(employee_list, status, date, leave_type=None, company=None, late=0, early=0):
 
 	employee_list = json.loads(employee_list)
 	for employee in employee_list:
@@ -52,18 +52,44 @@ def mark_employee_attendance(employee_list, status, date, leave_type=None, compa
 		else:
 			leave_type = None
 
-		company = frappe.db.get_value("Employee", employee["employee"], "Company", cache=True)
+		company = frappe.db.get_value("Employee", employee['employee'], "Company", cache=True)
 
-		attendance = frappe.get_doc(
-			dict(
-				doctype="Attendance",
-				employee=employee.get("employee"),
-				employee_name=employee.get("employee_name"),
-				attendance_date=getdate(date),
-				status=status,
-				leave_type=leave_type,
-				company=company,
-			)
-		)
+		attendance=frappe.get_doc(dict(
+			doctype='Attendance',
+			employee=employee.get('employee'),
+			employee_name=employee.get('employee_name'),
+			attendance_date=getdate(date),
+			status=status,
+			leave_type=leave_type,
+			company=company,
+			late_entry=late,
+			early_exit=early
+		))
+		attendance.insert()
+		attendance.submit()
+
+@frappe.whitelist()
+def mark_employee_late_attendance(employee_list, status, date, leave_type=None, company=None):
+
+	employee_list = json.loads(employee_list)
+	for employee in employee_list:
+
+		if status == "On Leave" and leave_type:
+			leave_type = leave_type
+		else:
+			leave_type = None
+
+		company = frappe.db.get_value("Employee", employee['employee'], "Company", cache=True)
+
+		attendance=frappe.get_doc(dict(
+			doctype='Attendance',
+			employee=employee.get('employee'),
+			employee_name=employee.get('employee_name'),
+			attendance_date=getdate(date),
+			status=status,
+			late_entry=1,
+			leave_type=leave_type,
+			company=company
+		))
 		attendance.insert()
 		attendance.submit()

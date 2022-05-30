@@ -594,6 +594,13 @@ def get_new_serial_number(series):
 
 
 def auto_make_serial_nos(args):
+	stock = None;
+	if args.get('voucher_type') == "Stock Entry":
+		stock = frappe.get_doc('Stock Entry', args.get('voucher_no'))
+		#stockItems = [item for item in stock.get('items') if item.get('item_code') == args.get('item_code')]
+		#print(stockItems[0].get('health_condition'))
+		#health_condition = stockItems[0].get('health_condition')
+		#actual_weight = stockItems[0].get('actual_weight')
 	serial_nos = get_serial_nos(args.get("serial_no"))
 	created_numbers = []
 	voucher_type = args.get("voucher_type")
@@ -605,6 +612,13 @@ def auto_make_serial_nos(args):
 		elif args.get("actual_qty", 0) > 0:
 			sr = frappe.new_doc("Serial No")
 			is_new = True
+
+		if stock != None and stock.get('fetch_health_condition') == 1:
+			print(serial_no)
+			stockItems = [item for item in stock.get('items') if item.get('serial_no').lower() == serial_no.lower()]
+			if len(stockItems) > 0:
+				sr.health_condition = stockItems[0].get('health_condition')
+				sr.item_actual_weight = stockItems[0].get('item_actual_weight')
 
 		sr = update_args_for_serial_no(sr, serial_no, args, is_new=is_new)
 		if is_new:

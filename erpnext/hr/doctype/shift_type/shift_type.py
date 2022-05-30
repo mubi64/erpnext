@@ -30,13 +30,22 @@ class ShiftType(Document):
 			or not self.last_sync_of_checkin
 		):
 			return
-		filters = {
-			"skip_auto_attendance": "0",
-			"attendance": ("is", "not set"),
-			"time": (">=", self.process_attendance_after),
-			"shift_actual_end": ("<", self.last_sync_of_checkin),
-			"shift": self.name,
-		}
+		
+		if self.checkout_entry:
+			filters = {
+				'skip_auto_attendance':'0',
+				'attendance':('is', 'not set'),
+				'time':('>=', self.process_attendance_after),
+				'shift': self.name
+			}
+		else:
+			filters = {
+				'skip_auto_attendance':'0',
+				'attendance':('is', 'not set'),
+				'time':('>=', self.process_attendance_after),
+				'shift_actual_end': ('<', self.last_sync_of_checkin),
+				'shift': self.name
+			}
 		logs = frappe.db.get_list(
 			"Employee Checkin", fields="*", filters=filters, order_by="employee,time"
 		)
