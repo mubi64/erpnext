@@ -359,13 +359,13 @@ class SalarySlip(TransactionBase):
 			)
 
 			if payroll_based_on == "Attendance" and consider_unmarked_attendance_as == "Absent":
-				unmarked_days = self.get_unmarked_days(include_holidays_in_total_working_days)
+				unmarked_days = self.get_unmarked_days(include_holidays_in_total_working_days, len(holidays))
 				self.absent_days += unmarked_days  # will be treated as absent
 				self.payment_days -= unmarked_days
 		else:
 			self.payment_days = 0
 
-	def get_unmarked_days(self, include_holidays_in_total_working_days):
+	def get_unmarked_days(self, include_holidays_in_total_working_days, holiday_count):
 		unmarked_days = self.total_working_days
 		joining_date, relieving_date = frappe.get_cached_value(
 			"Employee", self.employee, ["date_of_joining", "relieving_date"]
@@ -401,6 +401,9 @@ class SalarySlip(TransactionBase):
 			},
 			fields=["COUNT(*) as marked_days"],
 		)[0].marked_days
+
+		if include_holidays_in_total_working_days:
+			unmarked_days -= holiday_count
 
 		return unmarked_days
 
@@ -978,7 +981,29 @@ class SalarySlip(TransactionBase):
 		if flt(current_tax_amount) < 0:
 			current_tax_amount = 0
 
-		return current_tax_amount
+		# Mubi work here to minus the amount from monthly tax that is already paid to tax authorities
+		extra_current_tax_amount = 0
+		if frappe.db.exists("DocType", "Paid Income Tax Monthly"):
+			extra_current_tax_amount = flt(frappe.db.sql("""
+				select 
+					sum(pitm.amount) 
+				from 
+					`tabPaid Income Tax Monthly` pitm
+				where
+					pitm.docstatus=1
+					and %(from_date)s>=pitm.period_from
+					and  %(to_date)s<=pitm.period_to
+					and %(from_date)s<=pitm.payroll_date
+					and  %(to_date)s>=pitm.payroll_date
+					and pitm.employee=%(employee)s
+			""",{
+				"employee": self.employee,
+				"from_date": self.start_date,
+				"to_date": self.end_date
+			})[0][0])
+		
+
+		return current_tax_amount - extra_current_tax_amount
 
 	def get_income_tax_slabs(self, payroll_period):
 		income_tax_slab, ss_assignment_name = frappe.db.get_value(
@@ -1073,7 +1098,54 @@ class SalarySlip(TransactionBase):
 			)[0][0]
 		)
 
-		return total_tax_paid
+		# Mubi work here to minus the amount from annual tax that is already paid to tax authorities
+		total_extra_tax = 0
+		if frappe.db.exists("DocType", "Paid Income Tax"):
+			total_extra_tax = flt(frappe.db.sql("""
+				select 
+					sum(pit.amount) 
+				from 
+					`tabPaid Income Tax` pit
+				where
+					pit.docstatus=1
+					and %(from_date)s>=pit.period_from
+					and  %(to_date)s<=pit.period_to
+					and pit.employee=%(employee)s
+			""",{
+				"employee": self.employee,
+				"from_date": start_date,
+				"to_date": end_date
+			})[0][0])
+
+		# Mubi work here to minus the previous additional monthly tax
+		extra_current_tax_amount = 0
+		if frappe.db.exists("DocType", "Paid Income Tax Monthly"):
+			extra_current_tax_amount = flt(frappe.db.sql("""
+				select 
+					sum(pitm.amount) 
+				from 
+					`tabPaid Income Tax Monthly` pitm
+				where
+					pitm.docstatus=1
+					and %(from_date)s>=pitm.period_from
+					and  %(to_date)s<=pitm.period_to
+					and pitm.payroll_date < %(from_date)s
+					and pitm.payroll_date < %(to_date)s
+					and pitm.employee=%(employee)s
+			""",{
+				"employee": self.employee,
+				"from_date": self.start_date,
+				"to_date": self.end_date
+			})[0][0])
+
+		print("total_tax_paid")
+		print(total_tax_paid)
+		print("total_extra_tax")
+		print(total_extra_tax)
+		print("extra_current_tax_amount")
+		print(extra_current_tax_amount)
+			
+		return total_tax_paid + total_extra_tax + extra_current_tax_amount
 
 	def get_taxable_earnings(
 		self, allow_tax_exemption=False, based_on_payment_days=0, payroll_period=None
