@@ -330,6 +330,7 @@ class SalarySlip(TransactionBase):
 
 		if payroll_based_on == "Attendance":
 			actual_lwp, absent = self.calculate_lwp_ppl_and_absent_days_based_on_attendance(holidays)
+			
 			self.absent_days = absent
 		else:
 			actual_lwp = self.calculate_lwp_or_ppl_based_on_leave_application(holidays, working_days)
@@ -359,13 +360,15 @@ class SalarySlip(TransactionBase):
 			)
 
 			if payroll_based_on == "Attendance" and consider_unmarked_attendance_as == "Absent":
-				unmarked_days = self.get_unmarked_days(include_holidays_in_total_working_days, len(holidays))
+				unmarked_days = self.get_unmarked_days(include_holidays_in_total_working_days)
 				self.absent_days += unmarked_days  # will be treated as absent
 				self.payment_days -= unmarked_days
+
 		else:
 			self.payment_days = 0
 
-	def get_unmarked_days(self, include_holidays_in_total_working_days, holiday_count):
+
+	def get_unmarked_days(self, include_holidays_in_total_working_days):
 		unmarked_days = self.total_working_days
 		joining_date, relieving_date = frappe.get_cached_value(
 			"Employee", self.employee, ["date_of_joining", "relieving_date"]
@@ -391,6 +394,7 @@ class SalarySlip(TransactionBase):
 				self.end_date,
 			)
 
+
 		# exclude days for which attendance has been marked
 		unmarked_days -= frappe.get_all(
 			"Attendance",
@@ -403,7 +407,19 @@ class SalarySlip(TransactionBase):
 		)[0].marked_days
 
 		if include_holidays_in_total_working_days:
-			unmarked_days -= holiday_count
+			holidays = self.get_holidays_for_employee(start_date, end_date)
+			for idx, x in enumerate(holidays):
+				if frappe.get_all(
+					"Attendance",
+					filters={
+						"attendance_date": ["=", x],
+						"employee": self.employee,
+						"docstatus": 1,
+					},
+					fields=["COUNT(*) as marked_days"],
+				)[0].marked_days == 0:
+					unmarked_days -= 1
+			
 
 		return unmarked_days
 
@@ -452,6 +468,7 @@ class SalarySlip(TransactionBase):
 		if not cint(include_holidays_in_total_working_days):
 			holidays = self.get_holidays_for_employee(start_date, end_date)
 			payment_days -= len(holidays)
+
 
 		return payment_days
 
@@ -579,6 +596,8 @@ class SalarySlip(TransactionBase):
 				lwp += equivalent_lwp
 			elif d.status == "Absent":
 				absent += 1
+
+		
 		return lwp, absent
 
 	def add_earning_for_hourly_wages(self, doc, salary_component, amount):

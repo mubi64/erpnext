@@ -36,6 +36,7 @@ class ShiftType(Document):
 				'skip_auto_attendance':'0',
 				'attendance':('is', 'not set'),
 				'time':('>=', self.process_attendance_after),
+				'shift_actual_start':('is', 'set'),
 				'shift': self.name
 			}
 		else:
@@ -43,6 +44,7 @@ class ShiftType(Document):
 				'skip_auto_attendance':'0',
 				'attendance':('is', 'not set'),
 				'time':('>=', self.process_attendance_after),
+				'shift_actual_start':('is', 'set'),
 				'shift_actual_end': ('<', self.last_sync_of_checkin),
 				'shift': self.name
 			}
@@ -52,6 +54,7 @@ class ShiftType(Document):
 		for key, group in itertools.groupby(
 			logs, key=lambda x: (x["employee"], x["shift_actual_start"])
 		):
+			print(key, group)
 			single_shift_logs = list(group)
 			(
 				attendance_status,
