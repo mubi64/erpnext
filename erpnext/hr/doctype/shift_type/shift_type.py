@@ -148,6 +148,9 @@ class ShiftType(Document):
 		if not holiday_list_name:
 			holiday_list_name = get_holiday_list_for_employee(employee, False)
 		dates = get_filtered_date_list(employee, start_date, end_date, holiday_list=holiday_list_name)
+		print('start_date, end_date ************')
+		print(start_date)
+		print(end_date)
 		for date in dates:
 			shift_details = get_employee_shift(employee, date, True)
 			if shift_details and shift_details.shift_type.name == self.name:
